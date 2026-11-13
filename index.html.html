@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khám Phá Đường Xoắn Ốc Pythagore - Toán THCS</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Nunito & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Tone.js for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #fef3c7 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .math-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 380px;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: manipulation;
+        }
+        /* Hiệu ứng rung khi trả lời sai */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+        /* Hiệu ứng nảy khi trả lời đúng */
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+            100% { transform: scale(1); }
+        }
+        .animate-pop {
+            animation: pop 0.35s ease-out;
+        }
+        /* Tùy chỉnh thanh trượt */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 22px;
+            width: 22px;
+            border-radius: 50%;
+            background: #ef4444;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            border: 2px solid white;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+    </style>
+</head>
+<body class="text-slate-800 flex flex-col justify-between">
+
+    <!-- HEADER TIÊU ĐỀ LỚP HỌC -->
+    <header class="bg-white/90 backdrop-blur-md shadow-sm border-b-2 border-amber-200 sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-md text-2xl font-black">
+                    🐌
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-red-600 drop-shadow-sm">
+                        KHÁM PHÁ ĐƯỜNG XOẮN ỐC PYTHAGORE
+                    </h1>
+                    <p class="text-xs sm:text-sm font-semibold text-slate-500">
+                        Toán học trực quan THCS • Định lý Pythagore & Căn bậc hai (Spiral of Theodorus)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Nút công cụ nhanh trên Header -->
+            <div class="flex items-center gap-2">
+                <button id="btnSound" onclick="toggleSound()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition flex items-center gap-1.5 shadow-sm" title="Bật/Tắt âm thanh">
+                    <span id="soundIcon">🔊</span>
+                    <span class="hidden sm:inline">Âm thanh</span>
+                </button>
+                <button onclick="openSummaryModal()" class="px-3.5 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-sm transition flex items-center gap-1.5 shadow-sm">
+                    <span>📘</span>
+                    <span>Tổng kết kiến thức</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT: CHIA 2 CỘT -->
+    <main class="max-w-7xl w-full mx-auto px-4 py-4 sm:py-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        
+        <!-- BÊN TRÁI (7 CỘT): CANVAS TRỰC QUAN -->
+        <section class="lg:col-span-7 bg-white rounded-3xl shadow-xl border-2 border-sky-100 p-4 flex flex-col justify-between relative overflow-hidden">
+            <!-- Thanh công cụ phía trên Canvas -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 z-10">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold bg-sky-100 text-sky-800">
+                        Số tam giác: <span id="badgeCount" class="ml-1.5 text-base text-red-600">1</span> / 17
+                    </span>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold bg-amber-100 text-amber-800">
+                        Cạnh huyền ngoài cùng: <span id="badgeHyp" class="ml-1.5 math-font text-base text-amber-900">√2</span>
+                    </span>
+                </div>
+
+                <!-- Công tắc chế độ Nghệ thuật (Ốc sên) / Hình học -->
+                <button id="btnArtMode" onclick="toggleArtMode()" class="px-3.5 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm border-2 bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100">
+                    <span id="artIcon">🐌</span>
+                    <span id="artText">Chế độ Nghệ thuật: BẬT</span>
+                </button>
+            </div>
+
+            <!-- Khu vực vẽ Canvas -->
+            <div class="canvas-container flex-grow my-2 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-center" id="canvasWrapper">
+                <canvas id="spiralCanvas"></canvas>
+            </div>
+
+            <!-- Chú thích màu sắc & thông số dưới Canvas -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 text-xs sm:text-sm text-slate-600 font-semibold border-t border-slate-100">
+                <div class="flex items-center gap-3">
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-red-500 inline-block"></span> Cạnh góc vuông mới = 1</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-blue-600 inline-block"></span> Cạnh huyền mới = √(n+1)</span>
+                </div>
+                <div class="text-slate-400 italic text-xs">
+                    * Mỗi tam giác vuông nối tiếp tạo thành vòng xoắn ốc
+                </div>
+            </div>
+        </section>
+
+        <!-- BÊN PHẢI (5 CỘT): BẢNG ĐIỀU KHIỂN TRÒ CHƠI & MÔ PHỎNG -->
+        <section class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- Chuyển đổi 2 Chế độ -->
+            <div class="bg-white p-1.5 rounded-2xl shadow-md border border-slate-200 grid grid-cols-2 gap-1.5">
+                <button id="tabGame" onclick="switchMode('game')" class="py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base transition-all bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-sm flex items-center justify-center gap-2">
+                    <span>🎮</span> Thử thách Xây dựng
+                </button>
+                <button id="tabExplore" onclick="switchMode('explore')" class="py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base transition-all text-slate-600 hover:bg-slate-100 flex items-center justify-center gap-2">
+                    <span>🔭</span> Khám phá Tự do
+                </button>
+            </div>
+
+            <!-- PANEL CHẾ ĐỘ 1: TRÒ CHƠI THỬ THÁCH -->
+            <div id="panelGame" class="bg-white rounded-3xl shadow-xl border-2 border-rose-100 p-5 flex-grow flex flex-col justify-between">
+                <div>
+                    <!-- Điểm số & Chuỗi đúng -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center justify-between">
+                            <div>
+                                <div class="text-xs font-bold text-amber-700 uppercase">Điểm số</div>
+                                <div id="scoreDisplay" class="text-2xl font-black text-amber-600">0</div>
+                            </div>
+                            <span class="text-2xl">🏆</span>
+                        </div>
+                        <div class="bg-orange-50 border border-orange-200 rounded-2xl p-3 flex items-center justify-between">
+                            <div>
+                                <div class="text-xs font-bold text-orange-700 uppercase">Chuỗi đúng</div>
+                                <div id="streakDisplay" class="text-2xl font-black text-orange-600">0 🔥</div>
+                            </div>
+                            <span class="text-2xl">⚡</span>
+                        </div>
+                    </div>
+
+                    <!-- Khung Câu hỏi hiện tại -->
+                    <div id="questionBox" class="bg-gradient-to-br from-sky-50 to-indigo-50 border-2 border-sky-200 rounded-2xl p-4 mb-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="px-2.5 py-0.5 rounded-lg bg-sky-600 text-white text-xs font-extrabold uppercase">
+                                Bước <span id="stepNumber">1</span> / 16
+                            </span>
+                            <span class="text-xs font-bold text-sky-700">Áp dụng: c = √(a² + b²)</span>
+                        </div>
+                        <p id="questionPrompt" class="text-base sm:text-lg font-extrabold text-slate-800 leading-snug">
+                            Tam giác vuông mới có hai cạnh góc vuông là <span class="math-font text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">a = √2</span> và <span class="math-font text-red-600 bg-white px-1.5 py-0.5 rounded border border-red-200">b = 1</span>. Tính độ dài cạnh huyền <span class="math-font text-emerald-700">c</span>?
+                        </p>
+                    </div>
+
+                    <!-- 4 Lựa chọn đáp án -->
+                    <div id="optionsGrid" class="grid grid-cols-2 gap-3 mb-4">
+                        <!-- Các nút đáp án sẽ được sinh tự động bằng JS -->
+                    </div>
+
+                    <!-- Hộp Phản hồi / Giải thích công thức -->
+                    <div id="feedbackBox" class="hidden rounded-2xl p-3.5 text-sm font-bold border-2 transition-all">
+                        <div id="feedbackTitle" class="text-base font-black mb-1"></div>
+                        <div id="feedbackDetail" class="math-font text-xs sm:text-sm"></div>
+                    </div>
+                </div>
+
+                <!-- Nút Chơi lại ở cuối panel -->
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-4">
+                    <button onclick="resetGame()" class="w-full py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-sm sm:text-base transition flex items-center justify-center gap-2 shadow-sm">
+                        <span>🔄</span> Chơi lại từ đầu
+                    </button>
+                </div>
+            </div>
+
+            <!-- PANEL CHẾ ĐỘ 2: KHÁM PHÁ TỰ DO (DÀNH CHO GIÁO VIÊN GIẢNG BÀI) -->
+            <div id="panelExplore" class="hidden bg-white rounded-3xl shadow-xl border-2 border-indigo-100 p-5 flex-grow flex flex-col justify-between">
+                <div>
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-5">
+                        <h3 class="font-black text-indigo-900 text-base sm:text-lg mb-1 flex items-center gap-2">
+                            <span>👩‍🏫</span> Chế độ Trình chiếu Lớp học
+                        </h3>
+                        <p class="text-xs sm:text-sm text-indigo-700 font-semibold leading-relaxed">
+                            Thầy/cô kéo thanh trượt hoặc bấm nút để tăng/giảm từng tam giác vuông, quan sát quy luật tăng dần của cạnh huyền: 
+                            <span class="math-font font-bold">√2, √3, √4 (=2), √5...</span>
+                        </p>
+                    </div>
+
+                    <!-- Thanh trượt số tam giác -->
+                    <div class="mb-5 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <label for="triangleSlider" class="font-extrabold text-slate-700 text-sm">Số lượng tam giác vuông (n):</label>
+                            <span id="sliderValueText" class="math-font font-black text-lg text-red-600 bg-white px-3 py-0.5 rounded-xl border border-slate-200 shadow-sm">1</span>
+                        </div>
+                        <input type="range" id="triangleSlider" min="1" max="17" value="1" oninput="onSliderChange(this.value)" class="w-full my-2">
+                        <div class="flex justify-between text-xs font-bold text-slate-400 px-1">
+                            <span>1 (Khởi đầu)</span>
+                            <span>9 (Nửa vòng)</span>
+                            <span>17 (Vòng đầy)</span>
+                        </div>
+                    </div>
+
+                    <!-- Các nút điều khiển bước -->
+                    <div class="grid grid-cols-3 gap-2.5 mb-5">
+                        <button onclick="changeExploreStep(-1)" class="py-3 px-2 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 font-extrabold text-sm transition flex flex-col items-center justify-center gap-1 shadow-sm border border-slate-200">
+                            <span class="text-lg">➖</span>
+                            <span>-1 Tam giác</span>
+                        </button>
+                        <button id="btnAutoPlay" onclick="toggleAutoPlay()" class="py-3 px-2 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold text-sm transition flex flex-col items-center justify-center gap-1 shadow-md">
+                            <span id="autoPlayIcon" class="text-lg">▶️</span>
+                            <span id="autoPlayText">Tự động chạy</span>
+                        </button>
+                        <button onclick="changeExploreStep(1)" class="py-3 px-2 rounded-2xl bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-extrabold text-sm transition flex flex-col items-center justify-center gap-1 shadow-md">
+                            <span class="text-lg">➕</span>
+                            <span>+1 Tam giác</span>
+                        </button>
+                    </div>
+
+                    <!-- Bảng phân tích tam giác hiện tại -->
+                    <div class="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-4">
+                        <div class="text-xs font-extrabold text-emerald-800 uppercase mb-1.5">Phân tích tam giác ngoài cùng:</div>
+                        <div id="exploreFormula" class="math-font text-sm sm:text-base font-bold text-slate-800 bg-white p-3 rounded-xl border border-emerald-100 shadow-inner">
+                            c₁ = √(1² + 1²) = √2 ≈ 1.41
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nút Đặt lại -->
+                <div class="pt-3 border-t border-slate-100 mt-4">
+                    <button onclick="setExploreCount(1)" class="w-full py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-sm sm:text-base transition flex items-center justify-center gap-2">
+                        <span>🔄</span> Đặt lại về 1 tam giác
+                    </button>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- MODAL TỔNG KẾT KIẾN THỨC -->
+    <div id="summaryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border-4 border-amber-300 relative animate-pop max-h-[90vh] overflow-y-auto">
+            <button onclick="closeSummaryModal()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600 font-black text-xl flex items-center justify-center transition">
+                ✕
+            </button>
+            <div class="flex items-center gap-3 mb-4">
+                <span class="text-4xl">📐</span>
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-black text-red-600">TỔNG KẾT KIẾN THỨC TOÁN HỌC</h2>
+                    <p class="text-sm font-bold text-slate-500">Đường xoắn ốc Pythagore (Spiral of Theodorus)</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-sm sm:text-base text-slate-700 leading-relaxed">
+                <div class="bg-sky-50 p-4 rounded-2xl border border-sky-200">
+                    <h3 class="font-extrabold text-sky-900 mb-1">1. Cách dựng hình từ Định lý Pythagore:</h3>
+                    <p>Bắt đầu từ một tam giác vuông cân có hai cạnh góc vuông bằng <strong>1</strong>, ta được cạnh huyền dài <span class="math-font font-bold text-red-600">√2</span>. Tiếp tục dựng tam giác vuông mới nhận cạnh huyền vừa tìm được làm cạnh góc vuông thứ nhất và cạnh góc vuông thứ hai luôn bằng <strong>1</strong>.</p>
+                </div>
+
+                <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                    <h3 class="font-extrabold text-amber-900 mb-1">2. Quy luật dãy số Căn bậc hai:</h3>
+                    <p class="mb-2">Độ dài các cạnh huyền liên tiếp tạo thành dãy căn bậc hai của các số tự nhiên:</p>
+                    <div class="math-font bg-white p-3 rounded-xl border border-amber-200 font-bold text-center text-sm sm:text-base text-slate-800">
+                        √1 (=1), √2, √3, √4 (=2), √5, √6, ..., √17
+                    </div>
+                </div>
+
+                <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-200">
+                    <h3 class="font-extrabold text-emerald-900 mb-1">3. Ứng dụng & Nghệ thuật thực tế:</h3>
+                    <p>Đường xoắn ốc Pythagore giúp biểu diễn chính xác độ dài các số vô tỉ (<span class="math-font">√2, √3, √5...</span>) trên hình học, đồng thời xuất hiện kỳ diệu trong tự nhiên như <strong>vỏ ốc sên, đuôi sóc, đuôi công, sóng biển</strong>...</p>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center">
+                <button onclick="closeSummaryModal()" class="px-8 py-3 rounded-2xl bg-gradient-to-r from-red-500 to-amber-500 text-white font-extrabold text-base shadow-lg hover:opacity-95 transition">
+                    Đã hiểu! Tiếp tục khám phá 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HOÀN THÀNH VÒNG XOẮN (17 TAM GIÁC) -->
+    <div id="winModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border-4 border-emerald-400 text-center animate-pop">
+            <div class="text-6xl mb-3">🎉🐌🏆</div>
+            <h2 class="text-2xl font-black text-emerald-600 mb-2">XUẤT SẮC! HOÀN THÀNH VÒNG XOẮN!</h2>
+            <p class="text-slate-600 font-bold text-sm sm:text-base mb-4">
+                Em đã chinh phục trọn vẹn 17 tam giác vuông để tạo nên chiếc vỏ ốc Pythagore rực rỡ sắc màu!
+            </p>
+            <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-5">
+                <div class="text-xs font-extrabold text-amber-700 uppercase">Tổng điểm đạt được</div>
+                <div id="finalScore" class="text-4xl font-black text-amber-600 my-1">160</div>
+                <div class="text-xs font-bold text-slate-500">Cạnh huyền cuối cùng đạt tới: <span class="math-font text-red-600 font-extrabold">√18 = 3√2</span></div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeWinModal(); resetGame();" class="flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base shadow-md transition">
+                    🔄 Chơi lại
+                </button>
+                <button onclick="closeWinModal(); switchMode('explore');" class="flex-1 py-3 px-4 rounded-2xl bg-sky-100 hover:bg-sky-200 text-sky-800 font-extrabold text-base transition">
+                    🔭 Xem mô hình
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC & RENDERING -->
+    <script>
+        // --- 1. TRẠNG THÁI ỨNG DỤNG ---
+        const MAX_TRIANGLES = 17; // 17 tam giác tạo thành 1 vòng xoắn tròn đầy không chồng lấn
+        let currentMode = 'game'; // 'game' hoặc 'explore'
+        let triangleCount = 1;    // Số tam giác hiện tại đang hiển thị (từ 1 đến 17)
+        let artMode = true;       // Chế độ vẽ thêm đầu/thân ốc sên nghệ thuật
+        let soundEnabled = true;  // Âm thanh phản hồi
+        
+        // Trạng thái trò chơi
+        let score = 0;
+        let streak = 0;
+        let isAnswering = false;
+        let autoPlayInterval = null;
+
+        // Bảng màu cầu vồng hài hòa giống tranh vẽ học sinh
+        const rainbowColors = [
+            '#FF6B6B', '#FF8E53', '#FFA94D', '#FFD43B', '#A9E34B', 
+            '#51CF66', '#38D9A9', '#22B8CF', '#339AF0', '#5C7CFA', 
+            '#7950F2', '#9775FA', '#CC5DE8', '#F06595', '#FF8787',
+            '#FFA8A8', '#FFC078'
+        ];
+
+        // --- 2. HỆ THỐNG ÂM THANH (TONE.JS) ---
+        let synth = null;
+        function initAudio() {
+            if (!synth && typeof Tone !== 'undefined') {
+                synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -8;
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                if (!synth) return;
+
+                if (type === 'correct') {
+                    synth.triggerAttackRelease(["C5", "E5", "G5"], "16n");
+                } else if (type === 'wrong') {
+                    synth.triggerAttackRelease(["E3", "Eb3"], "8n");
+                } else if (type === 'step') {
+                    synth.triggerAttackRelease("G4", "32n");
+                } else if (type === 'win') {
+                    const now = Tone.now();
+                    synth.triggerAttackRelease("C5", "16n", now);
+                    synth.triggerAttackRelease("E5", "16n", now + 0.1);
+                    synth.triggerAttackRelease("G5", "16n", now + 0.2);
+                    synth.triggerAttackRelease("C6", "4n", now + 0.3);
+                }
+            } catch (e) {
+                // Bỏ qua lỗi âm thanh nếu trình duyệt chặn autoplay
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇';
+        }
+
+        // --- 3. ĐỊNH DẠNG TOÁN HỌC (RÚT GỌN CĂN BẬC HAI) ---
+        function formatSqrt(n) {
+            // Tìm số chính phương lớn nhất chia hết n để hiển thị đẹp (ví dụ √4 = 2, √8 = 2√2)
+            const root = Math.sqrt(n);
+            if (Number.isInteger(root)) {
+                return `${root}`;
+            }
+            // Kiểm tra rút gọn căn: n = k^2 * m
+            let k = 1;
+            let m = n;
+            for (let i = Math.floor(Math.sqrt(n)); i >= 2; i--) {
+                if (n % (i * i) === 0) {
+                    k = i;
+                    m = n / (i * i);
+                    break;
+                }
+            }
+            if (k > 1) {
+                return `√${n} (${k}√${m})`;
+            }
+            return `√${n}`;
+        }
+
+        function formatSimpleSqrt(n) {
+            const root = Math.sqrt(n);
+            if (Number.isInteger(root)) {
+                return `${root}`;
+            }
+            return `√${n}`;
+        }
+
+        // --- 4. VẼ CANVAS XOẮN ỐC PYTHAGORE & NGHỆ THUẬT ---
+        const canvas = document.getElementById('spiralCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const wrapper = document.getElementById('canvasWrapper');
+            const rect = wrapper.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            drawSpiral();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawSpiral() {
+            const wrapper = document.getElementById('canvasWrapper');
+            const width = wrapper.clientWidth;
+            const height = wrapper.clientHeight;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Tính toán tọa độ các đỉnh của xoắn ốc trong hệ tọa độ đơn vị (unit = 1)
+            // Đỉnh gốc O = (0, 0)
+            // P1 = (1, 0) -> cạnh đầu tiên dài 1
+            let points = [{ x: 0, y: 0 }, { x: 1, y: 0 }];
+            let currentAngle = 0;
+
+            for (let i = 1; i <= triangleCount; i++) {
+                // Cạnh huyền trước đó có độ dài sqrt(i)
+                // Góc quay thêm = atan(1 / sqrt(i))
+                const deltaAngle = Math.atan(1 / Math.sqrt(i));
+                currentAngle += deltaAngle;
+                const nextHyp = Math.sqrt(i + 1);
+                points.push({
+                    x: nextHyp * Math.cos(currentAngle),
+                    y: -nextHyp * Math.sin(currentAngle) // Dấu trừ để xoắn ngược chiều kim đồng hồ đẹp mắt
+                });
+            }
+
+            // Tự động tính tỷ lệ phóng to (scale) và tâm dịch chuyển để luôn nằm gọn giữa màn hình
+            const maxRadius = Math.sqrt(triangleCount + 1);
+            const minDim = Math.min(width, height);
+            // Chừa lề rộng hơn nếu bật chế độ ốc sên nghệ thuật
+            const paddingFactor = artMode ? 0.34 : 0.40;
+            const scale = (minDim * paddingFactor) / Math.max(maxRadius, 2.2);
+
+            // Tâm xoắn ốc hơi lệch phải một chút nếu vẽ đầu ốc sên bên trái
+            const centerX = artMode ? width * 0.56 : width * 0.5;
+            const centerY = artMode ? height * 0.48 : height * 0.5;
+
+            // Vẽ lưới tọa độ mờ nền sau
+            drawBackgroundGrid(width, height);
+
+            // Nếu bật chế độ Nghệ thuật: Vẽ thân ốc sên dễ thương đỡ lấy vỏ xoắn ốc
+            if (artMode) {
+                drawSnailBody(centerX, centerY, scale, points);
+            }
+
+            // Vẽ từng tam giác vuông từ 1 đến triangleCount
+            for (let i = 1; i <= triangleCount; i++) {
+                const p0 = { x: centerX, y: centerY };
+                const p1 = { x: centerX + points[i].x * scale, y: centerY + points[i].y * scale };
+                const p2 = { x: centerX + points[i + 1].x * scale, y: centerY + points[i + 1].y * scale };
+
+                const isLast = (i === triangleCount);
+                const color = rainbowColors[(i - 1) % rainbowColors.length];
+
+                // Tô màu tam giác
+                ctx.beginPath();
+                ctx.moveTo(p0.x, p0.y);
+                ctx.lineTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.closePath();
+
+                ctx.fillStyle = isLast ? color : hexToRgba(color, 0.78);
+                ctx.fill();
+
+                // Viền tam giác
+                ctx.lineWidth = isLast ? 2.8 : 1.5;
+                ctx.strokeStyle = isLast ? '#1e293b' : '#ffffff';
+                ctx.stroke();
+
+                // Vẽ ký hiệu góc vuông tại p1
+                drawRightAngleMarker(p0, p1, p2, Math.min(scale * 0.22, 12));
+
+                // Ghi nhãn độ dài cạnh huyền bên trong hoặc ngoài tam giác
+                if (i <= 12 || isLast || i % 2 === 1) {
+                    const midHypX = (p0.x + p2.x) / 2;
+                    const midHypY = (p0.y + p2.y) / 2;
+                    
+                    // Chỉ vẽ nhãn cho tam giác cuối hoặc vài tam giác tiêu biểu để không rối mắt
+                    if (isLast || i === 1) {
+                        drawLabelPill(
+                            formatSimpleSqrt(i + 1),
+                            midHypX,
+                            midHypY,
+                            isLast ? '#1d4ed8' : '#475569',
+                            isLast
+                        );
+                    }
+                }
+
+                // Riêng tam giác mới nhất (ngoài cùng): làm nổi bật 2 cạnh góc vuông & cạnh huyền
+                if (isLast) {
+                    // Cạnh góc vuông cũ (p0 -> p1)
+                    if (i === 1) {
+                        drawLabelPill('1', (p0.x + p1.x) / 2, (p0.y + p1.y) / 2 + 14, '#0f172a', false);
+                    }
+                    // Cạnh góc vuông mới bằng 1 (p1 -> p2)
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#ef4444';
+                    ctx.stroke();
+
+                    // Nhãn cạnh mới = 1 ở phía ngoài
+                    const outVecX = p2.x - p1.x;
+                    const outVecY = p2.y - p1.y;
+                    const normalX = -outVecY / Math.hypot(outVecX, outVecY);
+                    const normalY = outVecX / Math.hypot(outVecX, outVecY);
+                    const label1X = (p1.x + p2.x) / 2 - normalX * 18;
+                    const label1Y = (p1.y + p2.y) / 2 - normalY * 18;
+                    drawLabelPill('1', label1X, label1Y, '#dc2626', true);
+
+                    // Cạnh huyền mới (p0 -> p2)
+                    ctx.beginPath();
+                    ctx.moveTo(p0.x, p0.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#2563eb';
+                    ctx.stroke();
+                }
+            }
+
+            // Vẽ chấm tâm O nổi bật
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#0f172a';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function drawBackgroundGrid(w, h) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.16)';
+            ctx.lineWidth = 1;
+            const step = 28;
+            for (let x = 0; x < w; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
+            }
+            for (let y = 0; y < h; y += step) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawRightAngleMarker(p0, p1, p2, size) {
+            if (size < 4) return;
+            const v1x = p0.x - p1.x;
+            const v1y = p0.y - p1.y;
+            const len1 = Math.hypot(v1x, v1y);
+            const u1x = (v1x / len1) * size;
+            const u1y = (v1y / len1) * size;
+
+            const v2x = p2.x - p1.x;
+            const v2y = p2.y - p1.y;
+            const len2 = Math.hypot(v2x, v2y);
+            const u2x = (v2x / len2) * size;
+            const u2y = (v2y / len2) * size;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(p1.x + u1x, p1.y + u1y);
+            ctx.lineTo(p1.x + u1x + u2x, p1.y + u1y + u2y);
+            ctx.lineTo(p1.x + u2x, p1.y + u2y);
+            ctx.strokeStyle = 'rgba(15, 23, 42, 0.65)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawLabelPill(text, x, y, bgColor, highlight) {
+            ctx.save();
+            ctx.font = highlight ? '800 13px "JetBrains Mono", monospace' : '700 11px "JetBrains Mono", monospace';
+            const metrics = ctx.measureText(text);
+            const padX = 6;
+            const boxW = metrics.width + padX * 2;
+            const boxH = highlight ? 22 : 18;
+
+            ctx.fillStyle = highlight ? bgColor : 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(x - boxW / 2, y - boxH / 2, boxW, boxH, 6);
+            ctx.fill();
+
+            if (!highlight) {
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = highlight ? '#ffffff' : bgColor;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, x, y + 0.5);
+            ctx.restore();
+        }
+
+        // Vẽ minh họa chú ốc sên đáng yêu ôm lấy xoắn ốc Pythagore (giống tranh học sinh)
+        function drawSnailBody(cx, cy, scale, points) {
+            ctx.save();
+            const shellR = Math.max(Math.sqrt(triangleCount + 1) * scale * 0.85, scale * 1.4);
+            const baseY = cy + shellR * 0.72;
+
+            // Bãi cỏ xanh phía dưới
+            ctx.beginPath();
+            ctx.ellipse(cx - shellR * 0.1, baseY + 14, shellR * 1.45, 16, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(134, 239, 172, 0.55)';
+            ctx.fill();
+
+            // Thân ốc sên màu vàng kem ấm áp
+            ctx.beginPath();
+            ctx.moveTo(cx + shellR * 0.95, baseY + 6);
+            ctx.quadraticCurveTo(cx + shellR * 0.2, baseY + 12, cx - shellR * 0.95, baseY + 8);
+            // Cổ và đầu ốc sên vươn lên bên trái
+            ctx.quadraticCurveTo(cx - shellR * 1.25, baseY + 4, cx - shellR * 1.2, baseY - shellR * 0.42);
+            ctx.arc(cx - shellR * 1.05, baseY - shellR * 0.45, shellR * 0.22, Math.PI, 0, false);
+            ctx.quadraticCurveTo(cx - shellR * 0.75, baseY - shellR * 0.1, cx - shellR * 0.3, baseY - shellR * 0.1);
+            ctx.closePath();
+
+            ctx.fillStyle = '#fde68a';
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#d97706';
+            ctx.stroke();
+
+            // Hai râu ốc sên
+            const headX = cx - shellR * 1.05;
+            const headY = baseY - shellR * 0.62;
+            ctx.beginPath();
+            ctx.moveTo(headX - 5, headY);
+            ctx.quadraticCurveTo(headX - 14, headY - 22, headX - 18, headY - 26);
+            ctx.moveTo(headX + 5, headY);
+            ctx.quadraticCurveTo(headX + 2, headY - 24, headX + 4, headY - 28);
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // Mắt tròn dễ thương trên râu
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(headX - 18, headY - 27, 4.5, 0, Math.PI * 2);
+            ctx.arc(headX + 4, headY - 29, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.arc(headX - 18, headY - 27, 2, 0, Math.PI * 2);
+            ctx.arc(headX + 4, headY - 29, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Miệng cười
+            ctx.beginPath();
+            ctx.arc(headX - 4, headY + 14, 6, 0.2, Math.PI - 0.2);
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        // --- 5. LOGIC TRÒ CHƠI THỬ THÁCH (CHẾ ĐỘ 1) ---
+        function generateQuestion() {
+            isAnswering = false;
+            const feedbackBox = document.getElementById('feedbackBox');
+            feedbackBox.classList.add('hidden');
+
+            // Tam giác hiện tại đã có cạnh huyền = sqrt(triangleCount + 1)
+            // Câu hỏi sẽ yêu cầu tính cạnh huyền của tam giác TIẾP THEO: sqrt(triangleCount + 2)
+            const currentHypSq = triangleCount + 1;
+            const targetHypSq = triangleCount + 2;
+
+            document.getElementById('stepNumber').textContent = triangleCount;
+            document.getElementById('questionPrompt').innerHTML = `
+                Tam giác vuông mới nhận cạnh huyền vừa dựng (<span class="math-font text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">a = ${formatSimpleSqrt(currentHypSq)}</span>) và cạnh vuông góc mới (<span class="math-font text-red-600 bg-white px-1.5 py-0.5 rounded border border-red-200">b = 1</span>). Tính độ dài cạnh huyền <span class="math-font text-emerald-700">c</span>?
+            `;
+
+            // Tạo 4 lựa chọn đáp án (1 đúng, 3 nhiễu hợp lý)
+            let choices = new Set([targetHypSq]);
+            const distractors = [
+                currentHypSq + 2,
+                currentHypSq,
+                targetHypSq + 2,
+                targetHypSq + 3,
+                currentHypSq * 2
+            ];
+            for (let d of distractors) {
+                if (choices.size < 4 && d !== targetHypSq && d > 1) {
+                    choices.add(d);
+                }
+            }
+
+            // Chuyển sang mảng và xáo trộn ngẫu nhiên
+            let choiceArr = Array.from(choices).sort(() => Math.random() - 0.5);
+
+            const optionsGrid = document.getElementById('optionsGrid');
+            optionsGrid.innerHTML = '';
+
+            choiceArr.forEach(valSq => {
+                const btn = document.createElement('button');
+                btn.className = 'math-font py-3.5 px-4 rounded-2xl bg-white hover:bg-sky-50 border-2 border-slate-200 hover:border-sky-400 text-slate-800 font-extrabold text-lg sm:text-xl shadow-sm transition-all active:scale-95';
+                btn.textContent = formatSqrt(valSq);
+                btn.onclick = () => checkAnswer(valSq, targetHypSq, btn);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedSq, correctSq, btnElement) {
+            if (isAnswering) return;
+
+            const feedbackBox = document.getElementById('feedbackBox');
+            const feedbackTitle = document.getElementById('feedbackTitle');
+            const feedbackDetail = document.getElementById('feedbackDetail');
+            const prevSq = triangleCount + 1;
+
+            if (selectedSq === correctSq) {
+                isAnswering = true;
+                playSound('correct');
+
+                // Cập nhật điểm & chuỗi
+                streak++;
+                score += 10 + (streak > 1 ? streak * 2 : 0);
+                document.getElementById('scoreDisplay').textContent = score;
+                document.getElementById('streakDisplay').textContent = `${streak} 🔥`;
+
+                // Tô xanh nút chọn đúng
+                btnElement.classList.remove('bg-white', 'border-slate-200');
+                btnElement.classList.add('bg-emerald-500', 'border-emerald-600', 'text-white', 'animate-pop');
+
+                // Hiện giải thích công thức Pythagore
+                feedbackBox.className = 'rounded-2xl p-3.5 text-sm font-bold border-2 bg-emerald-50 border-emerald-300 text-emerald-900 block animate-pop';
+                feedbackTitle.textContent = '🎉 Chính xác! Đã mở khóa mảnh ghép tiếp theo!';
+                feedbackDetail.textContent = `c = √((${formatSimpleSqrt(prevSq)})² + 1²) = √(${prevSq} + 1) = ${formatSqrt(correctSq)}`;
+
+                // Tăng thêm 1 tam giác trên xoắn ốc
+                triangleCount++;
+                updateBadges();
+                drawSpiral();
+
+                // Kiểm tra hoàn thành 17 tam giác
+                if (triangleCount >= MAX_TRIANGLES) {
+                    setTimeout(() => {
+                        playSound('win');
+                        document.getElementById('finalScore').textContent = score;
+                        document.getElementById('winModal').classList.remove('hidden');
+                        document.getElementById('winModal').classList.add('flex');
+                    }, 900);
+                } else {
+                    setTimeout(() => {
+                        generateQuestion();
+                    }, 1200);
+                }
+            } else {
+                // Trả lời sai
+                playSound('wrong');
+                streak = 0;
+                document.getElementById('streakDisplay').textContent = '0 🔥';
+
+                btnElement.classList.remove('bg-white', 'border-slate-200');
+                btnElement.classList.add('bg-red-100', 'border-red-400', 'text-red-700', 'animate-shake');
+                btnElement.disabled = true;
+
+                feedbackBox.className = 'rounded-2xl p-3.5 text-sm font-bold border-2 bg-red-50 border-red-300 text-red-800 block';
+                feedbackTitle.textContent = '❌ Chưa đúng rồi, thử tính lại nhé!';
+                feedbackDetail.textContent = `Gợi ý: Bình phương cạnh huyền bằng tổng bình phương hai cạnh góc vuông (${prevSq} + 1).`;
+            }
+        }
+
+        function resetGame() {
+            stopAutoPlay();
+            triangleCount = 1;
+            score = 0;
+            streak = 0;
+            document.getElementById('scoreDisplay').textContent = '0';
+            document.getElementById('streakDisplay').textContent = '0 🔥';
+            updateBadges();
+            drawSpiral();
+            generateQuestion();
+        }
+
+        // --- 6. LOGIC CHẾ ĐỘ KHÁM PHÁ TỰ DO (CHẾ ĐỘ 2) ---
+        function onSliderChange(val) {
+            stopAutoPlay();
+            setExploreCount(parseInt(val));
+        }
+
+        function changeExploreStep(delta) {
+            stopAutoPlay();
+            let next = triangleCount + delta;
+            if (next < 1) next = 1;
+            if (next > MAX_TRIANGLES) next = MAX_TRIANGLES;
+            setExploreCount(next);
+            playSound('step');
+        }
+
+        function setExploreCount(count) {
+            triangleCount = count;
+            document.getElementById('triangleSlider').value = count;
+            document.getElementById('sliderValueText').textContent = count;
+
+            const hypSq = count + 1;
+            const approx = Math.sqrt(hypSq).toFixed(2);
+            document.getElementById('exploreFormula').textContent = 
+                `c_${count} = √((${formatSimpleSqrt(count)})² + 1²) = ${formatSqrt(hypSq)} ≈ ${approx}`;
+
+            updateBadges();
+            drawSpiral();
+        }
+
+        function toggleAutoPlay() {
+            if (autoPlayInterval) {
+                stopAutoPlay();
+            } else {
+                if (triangleCount >= MAX_TRIANGLES) {
+                    setExploreCount(1);
+                }
+                document.getElementById('autoPlayIcon').textContent = '⏸️';
+                document.getElementById('autoPlayText').textContent = 'Tạm dừng';
+                autoPlayInterval = setInterval(() => {
+                    if (triangleCount < MAX_TRIANGLES) {
+                        setExploreCount(triangleCount + 1);
+                        playSound('step');
+                    } else {
+                        stopAutoPlay();
+                    }
+                }, 750);
+            }
+        }
+
+        function stopAutoPlay() {
+            if (autoPlayInterval) {
+                clearInterval(autoPlayInterval);
+                autoPlayInterval = null;
+            }
+            document.getElementById('autoPlayIcon').textContent = '▶️';
+            document.getElementById('autoPlayText').textContent = 'Tự động chạy';
+        }
+
+        // --- 7. CHUYỂN TAB, MODAL & CẬP NHẬT UI ---
+        function switchMode(mode) {
+            currentMode = mode;
+            stopAutoPlay();
+
+            const tabGame = document.getElementById('tabGame');
+            const tabExplore = document.getElementById('tabExplore');
+            const panelGame = document.getElementById('panelGame');
+            const panelExplore = document.getElementById('panelExplore');
+
+            if (mode === 'game') {
+                tabGame.className = 'py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base transition-all bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-sm flex items-center justify-center gap-2';
+                tabExplore.className = 'py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base transition-all text-slate-600 hover:bg-slate-100 flex items-center justify-center gap-2';
+                panelGame.classList.remove('hidden');
+                panelExplore.classList.add('hidden');
+                resetGame();
+            } else {
+                tabExplore.className = 'py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base transition-all bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-sm flex items-center justify-center gap-2';
+                tabGame.className = 'py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base transition-all text-slate-600 hover:bg-slate-100 flex items-center justify-center gap-2';
+                panelExplore.classList.remove('hidden');
+                panelGame.classList.add('hidden');
+                setExploreCount(triangleCount);
+            }
+        }
+
+        function toggleArtMode() {
+            artMode = !artMode;
+            const btn = document.getElementById('btnArtMode');
+            const icon = document.getElementById('artIcon');
+            const text = document.getElementById('artText');
+
+            if (artMode) {
+                btn.className = 'px-3.5 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm border-2 bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100';
+                icon.textContent = '🐌';
+                text.textContent = 'Chế độ Nghệ thuật: BẬT';
+            } else {
+                btn.className = 'px-3.5 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm border-2 bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200';
+                icon.textContent = '📐';
+                text.textContent = 'Chế độ Hình học: BẬT';
+            }
+            drawSpiral();
+        }
+
+        function updateBadges() {
+            document.getElementById('badgeCount').textContent = triangleCount;
+            document.getElementById('badgeHyp').textContent = formatSimpleSqrt(triangleCount + 1);
+        }
+
+        function openSummaryModal() {
+            document.getElementById('summaryModal').classList.remove('hidden');
+            document.getElementById('summaryModal').classList.add('flex');
+        }
+
+        function closeSummaryModal() {
+            document.getElementById('summaryModal').classList.add('hidden');
+            document.getElementById('summaryModal').classList.remove('flex');
+        }
+
+        function closeWinModal() {
+            document.getElementById('winModal').classList.add('hidden');
+            document.getElementById('winModal').classList.remove('flex');
+        }
+
+        // Khởi chạy ban đầu khi trang tải xong
+        window.onload = function () {
+            resizeCanvas();
+            generateQuestion();
+            updateBadges();
+        };
+    </script>
+</body>
+</html>
